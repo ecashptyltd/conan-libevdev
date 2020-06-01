@@ -3,7 +3,7 @@ import os
 
 class LibevdevConan(ConanFile):
     name = "libevdev"
-    version = "1.8.0"
+    version = "1.9.0"
     license = "X11"
     description = "Wrapper library for Linux evdev devices."
     homepage = "https://www.freedesktop.org/wiki/Software/libevdev"
@@ -12,25 +12,25 @@ class LibevdevConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
+    _source_subfolder = "source_subfolder"
 
     def configure(self):
         del self.settings.compiler.libcxx
 
     def source(self):
-        tools.get("https://www.freedesktop.org/software/libevdev/libevdev-{0}.tar.xz".format(self.version))
-        os.rename("libevdev-{0}".format(self.version), "libevdev")
+        git = tools.Git(folder=self._source_subfolder)
+        git.clone("https://gitlab.freedesktop.org/libevdev/libevdev", "libevdev-" + self.version)
 
     def build(self):
+        self.run("autoreconf -fvi", cwd=self._source_subfolder)
         autotools = AutoToolsBuildEnvironment(self)
-        autotools.configure(configure_dir=os.path.join(self.source_folder, "libevdev"))
+        autotools.configure(configure_dir=self._source_subfolder)
         autotools.make()
-        autotools.install()
 
     def package(self):
-        self.copy(pattern="COPYING", src="libevdev", keep_path=False)
-        self.copy("*.h", dst="include", src="libevdev/include")
-        self.copy("*.so", dst="lib", keep_path=False)
-        self.copy("*.a", dst="lib", keep_path=False)
+        self.copy("*/libevdev.h", src=self._source_subfolder, dst="include")
+        self.copy("*/libevdev-uinput.h", src=self._source_subfolder, dst="include")
+        self.copy("*/libevdev.a", dst="lib", keep_path=False)
 
     def package_info(self):
         self.cpp_info.libs = ["evdev"]
